@@ -1,0 +1,121 @@
+---
+# A playbook to fully install and configure ELK stack (including NGINX) on a single server
+
+- user: ansible
+  become: yes
+  connection: ssh
+  gather_facts: no
+
+  tasks:
+    
+    - name: Debug date/time of playbook start
+      command: /usr/bin/date
+      register: start_time
+    
+    - debug: var=start_time
+
+    # Adds the Elasticsearch Public GPG Key
+    - name: Elasticsearch Public GPG Key
+      rpm_key:
+        state: present
+        key: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    
+    # Adds the Elasticsearch 6.x repo for yum
+    - name: Elastic Yum Repo
+      yum_repository:
+        name: elasticstack 
+        description: Elasticstack repository for 6.x packages
+        file: elasticsearch
+        baseurl: https://artifacts.elastic.co/packages/6.x/yum
+        gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        gpgcheck: yes
+        enabled: yes
+        async: yes
+    
+    # Installs all required packages for ELK
+    - name: Install Packages
+      yum:
+        name: 
+          - java-1.8.0-openjdk.x86_64
+          - elasticsearch
+          - kibana
+          - epel-release
+          - nginx
+          - httpd-tools
+          - logstash
+    
+    # Lists all installed packages on the server
+    - name: Installed List
+      yum:
+        list: installed
+      register: installed_result
+
+    - debug: var=installed_result
+
+    # Edits the elasticsearch.yml to restrict outside access
+    - name: Edit Elasticsearch YAML
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '^#network.host:'
+        line: 'network.host: localhost'
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '^#http.port:'
+        line: 'http.port: 9200'
+
+    # Starts & enables the elasticsearch service
+    - name: Start & Enable Elasticsearch
+      service:
+        name: elasticsearch.service
+        state: started
+        enabled: yes
+
+    # Edits the kibana.yml to set IP address to 'localhost'
+    - name: Edit Kibana YAML
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '^network.host:'
+        line: 'network.host: localhost'
+
+    # Starts & enables the Kibana service
+    - name: Start & Enable Kibana
+      service:
+        name: kibana.service
+        state: started
+        enabled: yes
+    
+    # Ammends the NGIX config file as required
+    - name: Ammending NGINX Conf
+      template:
+        src: templates/nginx.j2
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        mode: 0644
+        backup: yes
+
+    # Ammends the Kibana config file as required
+    - name: Ammending Kibana Conf 1/2
+      template:
+        src: templates/kibana.j2
+        dest: /etc/nginx/conf.d/kibana.conf
+        owner: root
+        mode: 0644
+
+    - name: Ammending Kibana Conf 2/2
+      lineinfile:
+        dest: /etc/nginx/conf.d/kibana.conf
+        regexp: '^(.*)server_name example.com;(.*)$'
+        line: 'server_name {{ inventory_hostname }};'
+
+    # Starts & enables nginx service
+    - name: Start & Enable NGINX
+      service:
+        name: nginx.service
+        state: started
+        enabled: yes
+
+    - name: Date/time stamp for when the playbook ends
+      command: /usr/bin/date
+      register: end_time
+
+    - debug: var=end_time
