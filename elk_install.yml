@@ -1,5 +1,6 @@
 ---
 # A playbook to fully install and configure ELK stack (including NGINX) on a single server
+# NOPASSWD for sudo and ssh keys are required for this to work
 
 - hosts: localhost
   become: yes
