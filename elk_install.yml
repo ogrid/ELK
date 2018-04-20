@@ -2,7 +2,6 @@
 # A playbook to fully install and configure ELK stack (including NGINX) on a single server
 
 - hosts: localhost
-  user: ansible
   become: yes
   connection: ssh
   gather_facts: no
