@@ -54,22 +54,32 @@
     - debug: var=installed_result
 
     # Edits the elasticsearch.yml to restrict outside access
-    - name: Edit Elasticsearch YAML
+    - name: Edit Elasticsearch YAML 1/2
       lineinfile:
         path: /etc/elasticsearch/elasticsearch.yml
         regexp: '^#network.host:'
         line: 'network.host: localhost'
+
+    - name: Edit Elasticsearch YAML 2/2
       lineinfile:
         path: /etc/elasticsearch/elasticsearch.yml
         regexp: '^#http.port:'
         line: 'http.port: 9200'
 
-    # Starts & enables the elasticsearch service
+    # Starts & enables the Elasticsearch service
     - name: Start & Enable Elasticsearch
       service:
         name: elasticsearch.service
         state: started
         enabled: yes
+
+    # Starts & enables the Logstash service
+    - name: Start & Enable Logstash
+      service:
+        name: logstash.service
+        state: started
+        enabled: yes
+  
 
     # Edits the kibana.yml to set IP address to 'localhost'
     - name: Edit Kibana YAML
@@ -108,7 +118,7 @@
         regexp: '^(.*)server_name example.com;(.*)$'
         line: 'server_name {{ inventory_hostname }};'
 
-    # Starts & enables nginx service
+    # Starts & enables Nginx service
     - name: Start & Enable NGINX
       service:
         name: nginx.service
